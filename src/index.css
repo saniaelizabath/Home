@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 overflow-x-hidden bg-white font-nunito text-ink;
+  }
+}
+
+@layer components {
+  .topic-pill {
+    @apply rounded-full border border-dashed border-neutral-400 bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600;
+  }
+
+  .chapter-item {
+    @apply flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-4 transition hover:translate-x-1.5 hover:border-gold hover:bg-white/20;
+  }
+
+  .footer-link {
+    @apply text-sm font-semibold text-white/70 transition hover:text-gold;
+  }
+}
+
+@layer utilities {
+  .dash-shadow-blue {
+    box-shadow: 8px 8px 0 #3b5bdb;
+  }
+
+  .dash-shadow-coral {
+    box-shadow: 8px 8px 0 #ff6b6b;
+  }
+
+  .animated-bg-layer {
+    @apply absolute inset-0 bg-cover bg-center opacity-15 mix-blend-multiply animate-bg-pan;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b5bdb;
+  border-radius: 9999px;
+}
