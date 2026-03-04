@@ -14,7 +14,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentProfile from "./pages/student/StudentProfile";
 import ClassDashboard from "./pages/student/ClassDashboard";
 import ProgressDashboard from "./pages/student/ProgressDashboard";
-import StudentChat from "./pages/student/Chat";
+import StudentChat from "./pages/student/StudentChat";
 import TaskScheduler from "./pages/student/TaskScheduler";
 import StudentAttendance from "./pages/student/Attendance";
 
@@ -35,6 +35,7 @@ import StudentManagement from "./pages/admin/StudentManagement";
 import TeacherManagement from "./pages/admin/TeacherManagement";
 import ClassScheduling from "./pages/admin/ClassScheduling";
 import CourseManagement from "./pages/admin/CourseManagement";
+import AdminChat from "./pages/admin/AdminChat";
 import Reports from "./pages/admin/Reports";
 import Announcements from "./pages/admin/Announcements";
 
@@ -75,6 +76,7 @@ function App() {
         <Route path="/admin/teachers" element={<PrivateRoute role="admin"><TeacherManagement /></PrivateRoute>} />
         <Route path="/admin/scheduling" element={<PrivateRoute role="admin"><ClassScheduling /></PrivateRoute>} />
         <Route path="/admin/courses" element={<PrivateRoute role="admin"><CourseManagement /></PrivateRoute>} />
+        <Route path="/admin/chat" element={<PrivateRoute role="admin"><AdminChat /></PrivateRoute>} />
         <Route path="/admin/reports" element={<PrivateRoute role="admin"><Reports /></PrivateRoute>} />
         <Route path="/admin/announcements" element={<PrivateRoute role="admin"><Announcements /></PrivateRoute>} />
 

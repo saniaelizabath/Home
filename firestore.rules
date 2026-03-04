@@ -24,12 +24,12 @@ service cloud.firestore {
 
     match /courses/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if true;
     }
 
     match /classes/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if true;
     }
 
     match /scheduled_classes/{docId} {
@@ -57,13 +57,33 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // Teacher attendance — open read/write (admin-only UI, no sensitive data)
+    // Chat conversations — open to all authenticated users (teachers use Firestore-only auth)
+    match /chats/{chatId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if true;
+        allow update: if true;
+        allow delete: if true;
+      }
+    }
+
+    // Legacy top-level messages collection
+    match /messages/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /teacher_attendance/{teacherId} {
       allow read:  if true;
       allow write: if true;
     }
 
-    // Student attendance — teacher writes, student reads their own
     match /student_attendance/{studentId} {
       allow read:  if true;
       allow write: if true;

@@ -30,6 +30,7 @@ const ADMIN_NAV = [
   { icon: "👩‍🏫", label: "Teachers", to: "/admin/teachers" },
   { icon: "📅", label: "Scheduling", to: "/admin/scheduling" },
   { icon: "📚", label: "Courses", to: "/admin/courses" },
+  { icon: "💬", label: "Chat", to: "/admin/chat" },
   { icon: "📊", label: "Reports", to: "/admin/reports" },
   { icon: "📢", label: "Announcements", to: "/admin/announcements" },
 ];

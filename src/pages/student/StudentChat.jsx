@@ -5,7 +5,7 @@ import { db, storage } from "../../firebase";
 import {
     collection, query, where, orderBy, onSnapshot,
     addDoc, getDocs, serverTimestamp, doc, updateDoc,
-    writeBatch, increment,
+    writeBatch, getDoc, increment,
 } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import useIsMobile from "../../hooks/useIsMobile";
@@ -15,8 +15,8 @@ const ROLE_COLOR = { Admin: "#FF6B6B", Teacher: "#3B5BDB", Student: "#20C997" };
 const ROLE_BG = { Admin: "#FFF0F0", Teacher: "#E8EEFF", Student: "#E6FCF5" };
 const ROLE_BORDER = { Admin: "#FF6B6B", Teacher: "#3B5BDB", Student: "#20C997" };
 
-// Teacher accent
-const MY_ROLE_COLOR = "#3B5BDB";
+// Students can chat with: Admins + Teachers
+const MY_ROLE_COLOR = "#20C997"; // student accent
 
 function Avatar({ name, role, size = 40 }) {
     return (
@@ -112,13 +112,11 @@ async function runDailyCleanup(currentUserUid) {
     }
 }
 
-export default function TeacherChat() {
+export default function StudentChat() {
     const { user } = useAuth();
     const isMobile = useIsMobile(768);
 
-    // Teachers log in via Firestore (not Firebase Auth), so their id is user.id not user.uid
-    const userId = user?.uid || user?.id;
-
+    // Contacts
     const [contacts, setContacts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -131,8 +129,9 @@ export default function TeacherChat() {
     const [file, setFile] = useState(null);
     const [sending, setSending] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterChip, setFilterChip] = useState("All"); // All | Admin | Teacher | Student
+    const [filterChip, setFilterChip] = useState("All"); // All | Admin | Teacher
 
+    // Mobile panel: "list" | "chat"
     const [mobilePanel, setMobilePanel] = useState("list");
 
     const fileRef = useRef();
@@ -141,40 +140,30 @@ export default function TeacherChat() {
 
     // 1. Run cleanup on mount (fire-and-forget)
     useEffect(() => {
-        if (userId) runDailyCleanup(userId);
-    }, [userId]);
+        if (user?.uid) runDailyCleanup(user.uid);
+    }, [user?.uid]);
 
-    // 2. Fetch contacts: progressive load — open collections instantly, auth-gated separately
+    // 2. Fetch contacts (Teachers first — open read, then Admins — auth-gated)
     useEffect(() => {
-        if (!userId) return;
+        if (!user?.uid) return;
         let cancelled = false;
         setLoading(true);
 
         const loadContacts = async () => {
             try {
-                // Fetch open-read collections first — these never hang
-                const [teachSnap, stuSnap] = await Promise.all([
-                    getDocs(collection(db, "teachers")),
-                    getDocs(collection(db, "students")),
-                ]);
+                // Teachers: open read — always fast
+                const teachSnap = await getDocs(collection(db, "teachers"));
                 if (cancelled) return;
-                const teachers = teachSnap.docs
-                    .filter(d => d.id !== userId)
-                    .map(d => ({ id: d.id, ...d.data(), role: "Teacher" }));
-                const students = stuSnap.docs.map(d => ({ id: d.id, ...d.data(), role: "Student" }));
-                // Show teachers + students immediately
-                setContacts([...teachers, ...students]);
+                const teachers = teachSnap.docs.map(d => ({ id: d.id, ...d.data(), role: "Teacher" }));
+                setContacts(teachers);
                 setLoading(false);
 
-                // Then fetch admins (requires auth) separately — non-blocking
+                // Admins: requires auth — fetch separately so teachers show immediately
                 try {
                     const adminSnap = await getDocs(collection(db, "admins"));
                     if (cancelled) return;
                     const admins = adminSnap.docs.map(d => ({ id: d.id, ...d.data(), role: "Admin" }));
-                    setContacts(prev => [
-                        ...admins,
-                        ...prev.filter(c => c.role !== "Admin"),
-                    ]);
+                    setContacts(prev => [...admins, ...prev.filter(c => c.role !== "Admin")]);
                 } catch (ae) {
                     console.warn("Could not load admin contacts:", ae);
                 }
@@ -186,26 +175,27 @@ export default function TeacherChat() {
 
         loadContacts();
         return () => { cancelled = true; };
-    }, [userId]);
+    }, [user?.uid]);
 
-    // 3. Real-time listener on chats for sidebar metadata + unread counts
+    // 3. Real-time listener on chats collection for this user → updates chatMeta for sidebar
     useEffect(() => {
-        if (!userId) return;
+        if (!user?.uid) return;
+        // Composite index needed in Firebase console: chats — participants (array-contains), lastMessageTime (desc)
         const q = query(
             collection(db, "chats"),
-            where("participants", "array-contains", userId)
+            where("participants", "array-contains", user.uid)
         );
         const unsub = onSnapshot(q, snap => {
             const meta = {};
             snap.docs.forEach(d => {
                 const data = d.data();
-                const otherId = data.participants?.find(p => p !== userId);
+                const otherId = data.participants?.find(p => p !== user.uid);
                 if (otherId) {
                     meta[otherId] = {
                         chatId: d.id,
                         lastMessage: data.lastMessage || "",
                         lastMessageTime: data.lastMessageTime || null,
-                        unreadCount: data.unreadCount?.[userId] || 0,
+                        unreadCount: data.unreadCount?.[user.uid] || 0,
                         lastSenderId: data.lastSenderId || null,
                     };
                 }
@@ -213,16 +203,17 @@ export default function TeacherChat() {
             setChatMeta(meta);
         });
         return () => unsub();
-    }, [userId]);
+    }, [user?.uid]);
 
-    // 4. Real-time messages for active chat (subcollection)
+    // 4. Real-time messages for active chat
     useEffect(() => {
         if (chatUnsubRef.current) { chatUnsubRef.current(); chatUnsubRef.current = null; }
-        if (!selectedContactId || !userId) { setMessages([]); return; }
+        if (!selectedContactId || !user?.uid) { setMessages([]); return; }
 
         const chatId = chatMeta[selectedContactId]?.chatId;
         if (!chatId) { setMessages([]); return; }
 
+        // Composite index needed: chats/{id}/messages — timestamp (asc)
         const q = query(
             collection(db, "chats", chatId, "messages"),
             orderBy("timestamp", "asc")
@@ -232,46 +223,48 @@ export default function TeacherChat() {
             const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             setMessages(msgs);
 
-            // Mark unread messages as read
+            // Mark messages as read + reset unread count
             const unreadMsgs = snap.docs.filter(d => {
                 const data = d.data();
-                return data.senderId !== userId && !(data.readBy || []).includes(userId);
+                return data.senderId !== user.uid && !(data.readBy || []).includes(user.uid);
             });
             if (unreadMsgs.length > 0) {
                 const batch = writeBatch(db);
                 unreadMsgs.forEach(d => {
-                    batch.update(d.ref, { readBy: [...(d.data().readBy || []), userId] });
+                    batch.update(d.ref, { readBy: [...(d.data().readBy || []), user.uid] });
                 });
+                // Reset unread count for this user
                 batch.update(doc(db, "chats", chatId), {
-                    [`unreadCount.${userId}`]: 0,
+                    [`unreadCount.${user.uid}`]: 0,
                 });
                 try { await batch.commit(); } catch (e) { console.warn("Mark-read error:", e); }
             }
         });
         chatUnsubRef.current = unsub;
         return () => { if (chatUnsubRef.current) chatUnsubRef.current(); };
-    }, [selectedContactId, chatMeta, userId]);
+    }, [selectedContactId, chatMeta, user?.uid]);
 
-    // 5. Auto-scroll
+    // 5. Auto-scroll to bottom
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // Create or reuse chat doc
     const getOrCreateChatId = useCallback(async (contactId) => {
         if (chatMeta[contactId]?.chatId) return chatMeta[contactId].chatId;
         const newChat = await addDoc(collection(db, "chats"), {
-            participants: [userId, contactId],
+            participants: [user.uid, contactId],
             lastMessage: "",
             lastMessageTime: serverTimestamp(),
             lastSenderId: null,
-            unreadCount: { [userId]: 0, [contactId]: 0 },
+            unreadCount: { [user.uid]: 0, [contactId]: 0 },
         });
         return newChat.id;
-    }, [chatMeta, userId]);
+    }, [chatMeta, user?.uid]);
 
     const send = async () => {
         if (!input.trim() && !file) return;
-        if (!selectedContactId || !userId) return;
+        if (!selectedContactId || !user?.uid) return;
         setSending(true);
         try {
             const chatId = await getOrCreateChatId(selectedContactId);
@@ -284,20 +277,23 @@ export default function TeacherChat() {
                 fileName = file.name;
             }
             const msgText = input.trim() || null;
+            const now = new Date();
 
+            // Write message to subcollection
             await addDoc(collection(db, "chats", chatId, "messages"), {
-                senderId: userId,
+                senderId: user.uid,
                 text: msgText,
                 fileURL: fileURL || null,
                 fileName: fileName || null,
                 timestamp: serverTimestamp(),
-                readBy: [userId],
+                readBy: [user.uid],
             });
 
+            // Update chat metadata
             await updateDoc(doc(db, "chats", chatId), {
                 lastMessage: fileURL ? `📎 ${fileName}` : msgText,
                 lastMessageTime: serverTimestamp(),
-                lastSenderId: userId,
+                lastSenderId: user.uid,
                 [`unreadCount.${selectedContactId}`]: increment(1),
             });
 
@@ -316,7 +312,7 @@ export default function TeacherChat() {
         if (isMobile) setMobilePanel("chat");
     };
 
-    // Sort: active chats first (by lastMessageTime desc), then alphabetically
+    // Sort contacts: active chats by lastMessageTime desc, then alphabetically
     const sortedContacts = [...contacts].sort((a, b) => {
         const aTime = chatMeta[a.id]?.lastMessageTime;
         const bTime = chatMeta[b.id]?.lastMessageTime;
@@ -330,7 +326,7 @@ export default function TeacherChat() {
         return (a.name || "").localeCompare(b.name || "");
     });
 
-    const CHIPS = ["All", "Admin", "Teacher", "Student"];
+    const CHIPS = ["All", "Admin", "Teacher"];
 
     const filteredContacts = sortedContacts.filter(c => {
         const matchChip = filterChip === "All" || c.role === filterChip;
@@ -341,9 +337,10 @@ export default function TeacherChat() {
 
     const selectedContact = contacts.find(c => c.id === selectedContactId);
 
+    // Read receipt indicator
     const ReadReceipt = ({ msg }) => {
-        if (msg.senderId !== userId) return null;
-        const isRead = Array.isArray(msg.readBy) && msg.readBy.some(uid => uid !== userId);
+        if (msg.senderId !== user.uid) return null;
+        const isRead = Array.isArray(msg.readBy) && msg.readBy.some(uid => uid !== user.uid);
         return (
             <span style={{ fontSize: 11, marginLeft: 4, color: isRead ? MY_ROLE_COLOR : "#aaa" }}>
                 {isRead ? "✓✓" : "✓"}
@@ -351,6 +348,7 @@ export default function TeacherChat() {
         );
     };
 
+    // Sidebar panel
     const SidebarPanel = (
         <div style={{
             width: isMobile ? "100%" : 280, background: "#fff", borderRadius: 20,
@@ -360,16 +358,18 @@ export default function TeacherChat() {
         }}>
             <div style={{ fontWeight: 800, fontSize: 13, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Contacts</div>
 
+            {/* Search */}
             <input
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 placeholder="🔍 Search contacts..."
                 style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "2px solid #eee", fontSize: 13, outline: "none", marginBottom: 10, boxSizing: "border-box" }}
             />
 
+            {/* Filter chips */}
             <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
                 {CHIPS.map(chip => (
                     <button key={chip} onClick={() => setFilterChip(chip)} style={{
-                        padding: "5px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        padding: "5px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
                         border: "none", cursor: "pointer", transition: "all 0.15s",
                         background: filterChip === chip ? MY_ROLE_COLOR : "#f0f2ff",
                         color: filterChip === chip ? "#fff" : "#555",
@@ -377,6 +377,7 @@ export default function TeacherChat() {
                 ))}
             </div>
 
+            {/* Contact list */}
             <div style={{ overflowY: "auto", flex: 1 }}>
                 {loading ? <Spinner /> : filteredContacts.length === 0 ? (
                     <div style={{ color: "#aaa", fontSize: 13, textAlign: "center", paddingTop: 20 }}>No contacts found.</div>
@@ -384,16 +385,8 @@ export default function TeacherChat() {
                     const meta = chatMeta[c.id];
                     const unread = meta?.unreadCount || 0;
                     const isSelected = selectedContactId === c.id;
-                    // Build subheading: subject for teachers, subject+class for students
-                    const subParts = [];
-                    if (c.role === "Student") {
-                        const subj = c.favSubject || c.subject;
-                        if (subj) subParts.push(subj);
-                        if (c.class || c.grade || c.className) subParts.push(c.class || c.grade || c.className);
-                    } else if (c.subject) {
-                        subParts.push(c.subject);
-                    }
-                    const subheading = subParts.join(" · ");
+                    // Subheading: teacher subject
+                    const subheading = c.subject || null;
                     return (
                         <div key={c.id} onClick={() => handleSelectContact(c.id)} style={{
                             display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
@@ -409,9 +402,9 @@ export default function TeacherChat() {
                                         <div style={{ fontSize: 10, color: "#bbb", flexShrink: 0 }}>{formatLastMsgTime(meta.lastMessageTime)}</div>
                                     )}
                                 </div>
-                                {subheading ? (
+                                {subheading && (
                                     <div style={{ fontSize: 10, color: ROLE_COLOR[c.role], fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 1 }}>{subheading}</div>
-                                ) : null}
+                                )}
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 1 }}>
                                     <div style={{ fontSize: 11, color: "#999", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130 }}>
                                         {meta?.lastMessage
@@ -431,10 +424,12 @@ export default function TeacherChat() {
         </div>
     );
 
+    // Chat panel
     const ChatPanel = (
         <div style={{ flex: 1, background: "#fff", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.07)", display: "flex", flexDirection: "column", overflow: "hidden", height: "100%" }}>
             {selectedContact ? (
                 <>
+                    {/* Chat header */}
                     <div style={{ padding: "14px 20px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 12 }}>
                         {isMobile && (
                             <button onClick={() => setMobilePanel("list")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", padding: "0 6px 0 0", color: "#555" }}>‹</button>
@@ -446,6 +441,7 @@ export default function TeacherChat() {
                         </div>
                     </div>
 
+                    {/* Messages */}
                     <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: 10 }}>
                         {messages.length === 0 && (
                             <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, marginTop: 60 }}>
@@ -455,7 +451,7 @@ export default function TeacherChat() {
                             </div>
                         )}
                         {messages.map(msg => {
-                            const isMine = msg.senderId === userId;
+                            const isMine = msg.senderId === user.uid;
                             return (
                                 <div key={msg.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                                     <div style={{
@@ -470,7 +466,7 @@ export default function TeacherChat() {
                                             ? <a href={msg.fileURL} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>📎 {msg.fileName || "Attachment"}</a>
                                             : msg.text
                                         }
-                                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4, display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", alignItems: "center" }}>
+                                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4, textAlign: isMine ? "right" : "left", display: "flex", justifyContent: isMine ? "flex-end" : "flex-start", alignItems: "center" }}>
                                             {formatMsgTime(msg.timestamp)}
                                             {isMine && <ReadReceipt msg={msg} />}
                                         </div>
@@ -481,9 +477,10 @@ export default function TeacherChat() {
                         <div ref={bottomRef} />
                     </div>
 
+                    {/* Input bar */}
                     <div style={{ padding: "14px 20px", borderTop: "1px solid #f0f0f0", display: "flex", gap: 10, alignItems: "flex-end", background: "#fff" }}>
                         {file && (
-                            <div style={{ fontSize: 11, color: MY_ROLE_COLOR, fontWeight: 700, padding: "6px 12px", background: ROLE_BG.Teacher, borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ fontSize: 11, color: MY_ROLE_COLOR, fontWeight: 700, padding: "6px 12px", background: ROLE_BG.Student, borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}>
                                 📎 {file.name}
                                 <span onClick={() => setFile(null)} style={{ cursor: "pointer", opacity: 0.7 }}>✕</span>
                             </div>
@@ -491,7 +488,7 @@ export default function TeacherChat() {
                         <input
                             value={input} onChange={e => setInput(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
-                            placeholder="Type a message…"
+                            placeholder="Type your message…"
                             style={{ flex: 1, padding: "13px 18px", borderRadius: 30, border: "2px solid #eee", fontSize: 14, outline: "none", fontFamily: "Inter, Poppins, sans-serif", transition: "border 0.2s" }}
                             onFocus={e => e.target.style.border = `2px solid ${MY_ROLE_COLOR}`}
                             onBlur={e => e.target.style.border = "2px solid #eee"}
@@ -507,7 +504,7 @@ export default function TeacherChat() {
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#aaa", textAlign: "center", padding: 40 }}>
                     <div style={{ fontSize: 64, marginBottom: 16 }}>💬</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: "#1a1a2e", marginBottom: 8 }}>Select a contact to start chatting</div>
-                    <div style={{ fontSize: 14 }}>Choose a student, admin or fellow teacher from the sidebar.</div>
+                    <div style={{ fontSize: 14 }}>Choose a teacher or admin from the sidebar to begin.</div>
                 </div>
             )}
         </div>
@@ -515,16 +512,18 @@ export default function TeacherChat() {
 
     return (
         <DashboardLayout>
+            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
                 <div>
                     <h1 style={{ fontFamily: "Inter, Poppins, sans-serif", fontSize: 28, fontWeight: 900, color: "#1a1a2e", marginBottom: 4 }}>Chat</h1>
-                    <p style={{ color: "#888", margin: 0, fontSize: 14 }}>Communicate with students, admins and fellow teachers.</p>
+                    <p style={{ color: "#888", margin: 0, fontSize: 14 }}>Ask doubts and get personalised help from teachers & admins.</p>
                 </div>
                 <div style={{ background: "#FFF3CD", color: "#856404", padding: "7px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid #FFEEBA" }}>
                     ⏳ Chat history resets daily at 12:00 AM
                 </div>
             </div>
 
+            {/* Layout */}
             <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, height: isMobile ? "auto" : "calc(100vh - 180px)", minHeight: 500 }}>
                 {isMobile ? (
                     mobilePanel === "list" ? SidebarPanel : ChatPanel
