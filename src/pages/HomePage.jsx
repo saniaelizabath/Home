@@ -70,7 +70,7 @@ const FEATURES = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Riya Mehta", meta: "Class 12 · Delhi · CBSE 2024", avatar: "R", avatarBg: "#E8EEFF", avatarColor: "#3B5BDB", score: "92/100", subject: "Accountancy", text: "The live classes are so interactive. Partnership accounts finally made sense and I scored 92 in boards. Couldn't have done it without LedgerLearn." },
+  { name: "Riya Mehta", meta: "Class 12 · Delhi · CBSE 2024", avatar: "R", avatarBg: "#E8EEFF", avatarColor: "#3B5BDB", score: "92/100", subject: "Accountancy", text: "The live classes are so interactive. Partnership accounts finally made sense and I scored 92 in boards. Couldn't have done it without Finova Academy." },
   { name: "Aditya Sharma", meta: "Class 11 · Mumbai · Ongoing", avatar: "A", avatarBg: "#FFF0F0", avatarColor: "#FF6B6B", score: "Top Batch", subject: "Both Subjects", text: "The 1-on-1 doubt sessions changed everything. My bank reconciliation doubts were solved in one 30-minute session. Way better than any coaching.", highlight: true },
   { name: "Priya Nair", meta: "Class 12 · Chennai · CBSE 2024", avatar: "P", avatarBg: "#E6FCF5", avatarColor: "#20C997", score: "Full Marks", subject: "Business Studies", text: "Weekly progress reports kept me consistent and focused. My parents were always informed and that motivated me to study harder. Full marks in BST!" },
 ];
@@ -430,34 +430,16 @@ function HeroSection() {
       {/* Subtle dot-grid bg */}
       <DoodleGrid id="hero-dots" />
 
-      {/* ── Scattered doodles ── */}
-      {/* Top-left */}
-      <DoodleCircles ref={null} style={{ position: "absolute", top: 36, left: 32, opacity: 0, zIndex: 1 }} />
-      <DoodleBook style={{ position: "absolute", top: 100, left: 180, opacity: 0, zIndex: 1, transform: "rotate(-12deg)" }} />
-      <DoodleWave style={{ position: "absolute", top: 52, left: 320, opacity: 0, zIndex: 1 }} />
-      {/* Top-right */}
-      <DoodleStar style={{ position: "absolute", top: 44, right: 200, opacity: 0, zIndex: 1, transform: "rotate(18deg)" }} />
-      <DoodleRupee style={{ position: "absolute", top: 28, right: 80, opacity: 0, zIndex: 1 }} />
-      {/* Mid-left */}
-      <DoodlePencil style={{ position: "absolute", top: "42%", left: 40, opacity: 0, zIndex: 1, transform: "rotate(-20deg)" }} />
-      <DoodleTriangle style={{ position: "absolute", top: "55%", left: 150, opacity: 0, zIndex: 1 }} />
-      {/* Mid-right */}
-      <DoodleMagnifier style={{ position: "absolute", top: "38%", right: 60, opacity: 0, zIndex: 1, transform: "rotate(10deg)" }} />
-      {/* Bottom */}
-      <DoodleBarChart style={{ position: "absolute", bottom: 80, left: 90, opacity: 0, zIndex: 1 }} />
-      <DoodleStar style={{ position: "absolute", bottom: 60, right: 180, opacity: 0, zIndex: 1, transform: "rotate(-15deg)" }} />
-      <DoodleWave style={{ position: "absolute", bottom: 40, left: "45%", opacity: 0, zIndex: 1, transform: "rotate(6deg)" }} />
-
-      {/* ── GSAP-driven refs (re-attach visibility through GSAP entrance) ── */}
+      {/* ── GSAP-driven Scattered Doodles ── */}
       {[
-        { el: <DoodleCircles />, s: { position: "absolute", top: 36, left: 32, zIndex: 1, opacity: 0 } },
-        { el: <DoodleBook />, s: { position: "absolute", top: 100, left: 180, zIndex: 1, opacity: 0, transform: "rotate(-12deg)" } },
-        { el: <DoodleWave />, s: { position: "absolute", top: 52, left: 318, zIndex: 1, opacity: 0 } },
-        { el: <DoodleStar />, s: { position: "absolute", top: 44, right: 196, zIndex: 1, opacity: 0, transform: "rotate(18deg)" } },
-        { el: <DoodleRupee />, s: { position: "absolute", top: 28, right: 76, zIndex: 1, opacity: 0 } },
-        { el: <DoodlePencil />, s: { position: "absolute", top: "42%", left: 40, zIndex: 1, opacity: 0, transform: "rotate(-20deg)" } },
-        { el: <DoodleTriangle />, s: { position: "absolute", top: "55%", left: 148, zIndex: 1, opacity: 0 } },
-        { el: <DoodleMagnifier />, s: { position: "absolute", top: "38%", right: 58, zIndex: 1, opacity: 0, transform: "rotate(10deg)" } },
+        { el: <DoodleCircles />, s: { position: "absolute", top: 136, left: 32, zIndex: 1, opacity: 0 } },
+        { el: <DoodleBook />, s: { position: "absolute", top: 200, left: 180, zIndex: 1, opacity: 0, transform: "rotate(-12deg)" } },
+        { el: <DoodleWave />, s: { position: "absolute", top: 152, left: 318, zIndex: 1, opacity: 0 } },
+        { el: <DoodleStar />, s: { position: "absolute", top: 144, right: 196, zIndex: 1, opacity: 0, transform: "rotate(18deg)" } },
+        { el: <DoodleRupee />, s: { position: "absolute", top: 128, right: 76, zIndex: 1, opacity: 0 } },
+        { el: <DoodlePencil />, s: { position: "absolute", top: "52%", left: 40, zIndex: 1, opacity: 0, transform: "rotate(-20deg)" } },
+        { el: <DoodleTriangle />, s: { position: "absolute", top: "65%", left: 148, zIndex: 1, opacity: 0 } },
+        { el: <DoodleMagnifier />, s: { position: "absolute", top: "48%", right: 58, zIndex: 1, opacity: 0, transform: "rotate(10deg)" } },
         { el: <DoodleBarChart />, s: { position: "absolute", bottom: 80, left: 88, zIndex: 1, opacity: 0 } },
         { el: <DoodleStar />, s: { position: "absolute", bottom: 60, right: 178, zIndex: 1, opacity: 0, transform: "rotate(-15deg)" } },
         { el: <DoodleWave />, s: { position: "absolute", bottom: 40, left: "45%", zIndex: 1, opacity: 0, transform: "rotate(6deg)" } },
@@ -503,7 +485,7 @@ function HeroSection() {
           </div>
 
           <p style={{ fontFamily: "var(--font-body)", fontSize: 17, color: "#555", lineHeight: 1.9, maxWidth: 520, margin: "0 0 36px" }}>
-            Stop dreading journal entries and ratio analysis! LedgerLearn brings expert-led{" "}
+            Stop dreading journal entries and ratio analysis! Finova Academy brings expert-led{" "}
             <strong style={{ color: "#1a1a2e", fontWeight: 700 }}>live online classes</strong> for Class 11–12 Commerce — personal attention, regular tests, and parent progress reports.
           </p>
 
@@ -672,7 +654,7 @@ function WhatWeTeach() {
   );
 }
 
-// ─── WHY LEDGERLEARN — horizontal scroll with GIFs ───────────────────────────
+// ─── WHY — horizontal scroll with GIFs ───────────────────────────
 
 
 
@@ -717,10 +699,10 @@ function FeaturesSection() {
   return (
     <section style={{ background: "#fafafa", padding: "0" }}>
       <div style={{ textAlign: "center", padding: "90px 24px 60px", background: "#ffffff" }}>
-        <p className="section-tag" style={{ justifyContent: "center" }}>Why LedgerLearn</p>
+        <p className="section-tag" style={{ justifyContent: "center" }}>Why Finova Academy</p>
         <h2 className="section-title" style={{ textAlign: "center" }}>Everything you need<br />to score big 💯</h2>
         <p style={{ fontFamily: "var(--font-body)", color: "#666", fontSize: 16, lineHeight: 1.8, maxWidth: 500, margin: "14px auto 0" }}>
-          Six powerful features that set LedgerLearn apart from any coaching class.
+          Six powerful features that set Finova Academy apart from any coaching class.
         </p>
       </div>
 
@@ -794,7 +776,7 @@ function ChaptersSection() {
       {/* Subtle dot pattern */}
       <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", gap: 60, alignItems: "flex-start", position: "relative", zIndex: 1 }}>
+      <div className="chapters-container" style={{ maxWidth: 1280, margin: "0 auto", display: "flex", gap: 60, alignItems: "flex-start", position: "relative", zIndex: 1 }}>
 
         {/* Left: Chapter list */}
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
@@ -1047,7 +1029,7 @@ export default function HomePage() {
           .feat-gif  { flex: 0 0 auto !important; width: 100% !important; min-height: 55vw !important; position: relative !important; }
           .feat-gif img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
           .feat-text { flex: 0 0 auto !important; width: 100% !important; padding: 40px 24px !important; }
-          .hero-card-col { display: none !important; }
+          /* .hero-card-col { display: none !important; } */
         }
 
         /* ── CHAPTER ITEMS ── */
@@ -1079,11 +1061,12 @@ export default function HomePage() {
         .cta-section { padding: 90px 60px; text-align: center; background: white; position: relative; overflow: hidden; }
         .cta-section h2 { font-family: var(--font-display); font-size: clamp(34px,5vw,58px); font-weight: 700; line-height: 1.15; margin: 20px 0; letter-spacing: -0.02em; }
         .cta-section p  { font-size: 16px; color: #666; margin: 0 auto 36px; max-width: 500px; line-height: 1.8; }
+        .cta-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 
         /* ── FOOTER ── */
         .footer-root { background: var(--ink); color: white; padding: 60px; border-top: 4px dashed rgba(255,255,255,0.08); }
         .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 40px; }
-        .footer-logo { font-family: var(--font-display); font-size: 34px; font-weight: 700; color: var(--gold); margin-bottom: 14px; font-style: italic; }
+        .footer-logo { font-family: var(--font-display); font-size: 34px; font-weight: 700; color: var(--gold); margin-bottom: 14px; }
         .footer-desc { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.8; }
         .footer-heading { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.4); margin-bottom: 14px; }
         .footer-link { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.2s; display: block; margin-bottom: 10px; }
@@ -1128,15 +1111,16 @@ export default function HomePage() {
           .feat-gif { flex: 0 0 auto !important; width: 100% !important; min-height: 52vw !important; }
           .feat-text { flex: 0 0 auto !important; width: 100% !important; padding: 40px 24px !important; }
           /* Chapters: hide GIF col */
-          .chapters-gif-col { display: none !important; }
+          /* .chapters-gif-col { display: none !important; } */
           /* CTA: hide GIF */
-          .cta-gif-card { display: none !important; }
+          /* .cta-gif-card { display: none !important; } */
         }
 
         /* ── Mobile: 640px – extra polish ── */
         @media (max-width: 640px) {
           /* Hero */
-          .hero-card-col { display: none !important; }
+          /* .hero-card-col { display: none !important; } */
+          .hero-card-col { margin-top: 40px; display: flex; justify-content: center; width: 100%; }
 
           /* WhatWeTeach header padding */
           #subjects > div:first-child { padding: 56px 20px 32px !important; }
@@ -1144,19 +1128,26 @@ export default function HomePage() {
 
           /* Chapters: single-col grid, smaller tabs */
           #chapters { padding: 56px 16px !important; }
+          .chapters-container { flex-direction: column !important; align-items: center !important; gap: 40px !important; }
           #chapters button { padding: 7px 14px !important; font-size: 12px !important; }
           #chapters [style*="gridTemplateColumns"] { grid-template-columns: 1fr !important; }
+          .chapters-gif-col { display: flex !important; margin-top: 0px !important; width: 100% !important; justify-content: center !important; flex: 0 0 auto !important; }
+          .chapters-gif-col img { width: 100%; max-width: 340px; height: auto; object-fit: contain; }
+
+          /* CTA */
+          #cta { padding: 56px 20px !important; }
+          /* #cta > div > div:first-child { display: none !important; } */
+          .cta-gif-card { display: flex !important; margin-bottom: 32px; justify-content: center; flex: 0 0 auto !important; }
+          .cta-gif-card img { width: 220px !important; height: auto !important; }
+          
+          #cta > div > div:last-child { text-align: center !important; }
+          #cta > div > div:last-child > div { justify-content: center !important; flex-wrap: wrap !important; }
+          .cta-form-row { grid-template-columns: 1fr !important; gap: 12px !important; margin-bottom: 12px !important; }
 
           /* Testimonials */
           #tests .corner-img { display: none !important; }
           #tests > div { padding: 56px 20px !important; }
           .testimonials-grid { grid-template-columns: 1fr !important; }
-
-          /* CTA */
-          #cta { padding: 56px 20px !important; }
-          #cta > div > div:first-child { display: none !important; }
-          #cta > div > div:last-child { text-align: center !important; }
-          #cta > div > div:last-child > div { justify-content: center !important; flex-wrap: wrap !important; }
 
           /* Footer */
           .footer-root { padding: 40px 20px !important; }
@@ -1210,19 +1201,32 @@ export default function HomePage() {
               </p>
               <div style={{ background: "#f8f9ff", padding: 32, borderRadius: 24, border: "2px solid #eee", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
                 <h3 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 800, color: "#1a1a2e", marginBottom: 20 }}>Book Your Free Trial</h3>
-                <form onSubmit={e => { e.preventDefault(); alert("Free trial booked! We will contact you soon."); }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                    <input type="text" placeholder="Full Name" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14 }} />
-                    <input type="tel" placeholder="Phone Number" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14 }} />
+                <form onSubmit={e => {
+                  e.preventDefault();
+                  const data = new FormData(e.target);
+                  const name = data.get("name");
+                  const phone = data.get("phone");
+                  const email = data.get("email");
+                  const subject = data.get("subject");
+                  const cls = data.get("class");
+                  const body = `Name: ${name}%0D%0APhone: ${phone}%0D%0AEmail: ${email}%0D%0ASubject: ${subject}%0D%0AClass: ${cls}`;
+                  window.location.href = `mailto:commerceacademy2026@gmail.com?subject=New Free Trial Booking&body=${body}`;
+                }}>
+                  <div className="cta-form-row">
+                    <input name="name" type="text" placeholder="Full Name" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, width: "100%" }} />
+                    <input name="phone" type="tel" placeholder="Phone Number" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, width: "100%" }} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                    <select required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, background: "#fff" }}>
+                  <div className="cta-form-row">
+                    <input name="email" type="email" placeholder="Email Address" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, width: "100%", gridColumn: "1 / -1" }} />
+                  </div>
+                  <div className="cta-form-row" style={{ marginBottom: 20 }}>
+                    <select name="subject" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, background: "#fff", width: "100%" }}>
                       <option value="">Select Subject</option>
                       <option>Accountancy</option>
                       <option>Business Studies</option>
                       <option>Both Subjects</option>
                     </select>
-                    <select required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, background: "#fff" }}>
+                    <select name="class" required style={{ padding: "12px 16px", borderRadius: 12, border: "2px solid #eee", outline: "none", fontSize: 14, background: "#fff", width: "100%" }}>
                       <option value="">Select Class</option>
                       <option>Class 11</option>
                       <option>Class 12</option>
@@ -1244,24 +1248,27 @@ export default function HomePage() {
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
             <div className="footer-grid">
               <div>
-                <p className="footer-logo">📒 LedgerLearn</p>
+                <p className="footer-logo"> Finova Academy</p>
                 <p className="footer-desc">Live online tuition for CBSE Class 11 & 12 Commerce. Expert-led live classes for groups & individuals, personal 1-on-1 doubt clearing, and parent progress updates — all in one place.</p>
               </div>
               <div>
                 <p className="footer-heading">Subjects</p>
-                {["Accountancy – Class 11", "Accountancy – Class 12", "Business Studies – Class 11", "Business Studies – Class 12"].map(l => <a key={l} href="#subjects" className="footer-link">{l}</a>)}
-              </div>
-              <div>
-                <p className="footer-heading">Resources</p>
-                {["Revision Notes", "Practice Tests", "Previous Year Papers", "CBSE Syllabus 2025–26", "Board Exam Tips"].map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
+                {["Accountancy – Class 11", "Accountancy – Class 12", "Business Studies – Class 11", "Business Studies – Class 12"].map(l => <div key={l} className="footer-link" style={{ cursor: "default", color: "rgba(255,255,255,0.7)" }}>{l}</div>)}
               </div>
               <div>
                 <p className="footer-heading">Company</p>
-                {["About Us", "Our Teachers", "Blog", "Contact", "Privacy Policy"].map(l => <a key={l} href="#" className="footer-link">{l}</a>)}
+                {["About Finova Academy", "Our Faculty", "Methodology", "Privacy Policy"].map(l => <div key={l} className="footer-link" style={{ cursor: "default", color: "rgba(255,255,255,0.7)" }}>{l}</div>)}
+              </div>
+              <div>
+                <p className="footer-heading">Contact</p>
+                <div className="footer-link" style={{ cursor: "pointer", color: "white" }} onClick={() => window.location.href = 'mailto:commerceacademy2026@gmail.com'}>✉️ commerceacademy2026@gmail.com</div>
+                <div className="footer-link" style={{ cursor: "default", color: "rgba(255,255,255,0.7)" }}>📍 United Arab Emirates</div>
+                <div className="footer-link" style={{ cursor: "default", color: "rgba(255,255,255,0.7)" }}>⭐ 100% CBSE Commerce Focus</div>
+                <div className="footer-link" style={{ cursor: "default", color: "rgba(255,255,255,0.7)" }}>🎓 Expert Faculty & Mentorship</div>
               </div>
             </div>
             <div className="footer-bottom">
-              <span>© 2026 LedgerLearn. Made with ❤️ for commerce students across India.</span>
+              <span>© 2026 Finova Academy. Made with ❤️ for commerce students across India.</span>
               <span>CBSE Class 11 & 12 · Accountancy · Business Studies</span>
             </div>
           </div>

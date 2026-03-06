@@ -1,21 +1,34 @@
 /* ─── Full-width sticky header bar ─────────────────────────────────────────── */
 .pill-nav-container {
-  position: sticky;
+  position: fixed;
+  /* 'fixed' overlays the hero section background seamlessly */
   top: 0;
   left: 0;
   width: 100%;
   z-index: 999;
-  background: #FDFAF4;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(180, 160, 120, 0.18);
-  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.06);
+  /* Default: fully transparent on hero */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+  transition: background 0.45s ease, backdrop-filter 0.45s ease,
+    border-color 0.45s ease, box-shadow 0.45s ease;
 }
 
-/* Inner nav: brand LEFT, pills RIGHT */
+/* After scrolling past hero — frosted glass kicks in */
+.pill-nav-container.scrolled {
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(32px) saturate(220%);
+  -webkit-backdrop-filter: blur(32px) saturate(220%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 32px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Inner nav: brand LEFT (flush), pills RIGHT */
 .pill-nav {
-  --nav-h: 42px;
-  --pill-pad-x: 18px;
+  --nav-h: 48px;
+  --pill-pad-x: 20px;
   --pill-gap: 3px;
   display: flex;
   align-items: center;
@@ -23,7 +36,7 @@
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 14px 40px;
+  padding: 10px 32px 10px 0px;
   box-sizing: border-box;
 }
 
@@ -31,18 +44,31 @@
 .pill-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   flex-shrink: 0;
   text-decoration: none;
+  margin-right: auto;
+  /* push pills to the right */
+  padding-left: 8px;
+  /* flush-left with tiny edge gap */
 }
 
+/* Video logo wrapper — enlarged */
 .pill-logo-video-wrap {
-  width: 72px;
-  height: 72px;
-  border-radius: 6px;
+  width: 92px;
+  height: 92px;
+  border-radius: 16px;
   overflow: hidden;
   flex-shrink: 0;
   background: transparent;
+  /* subtle glow ring */
+  filter: drop-shadow(0 0 12px rgba(59, 91, 219, 0.35));
+  transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.pill-brand:hover .pill-logo-video-wrap {
+  filter: drop-shadow(0 0 22px rgba(59, 91, 219, 0.60));
+  transform: scale(1.04);
 }
 
 .pill-logo-video-wrap video {
@@ -52,34 +78,43 @@
   display: block;
 }
 
+/* Brand text block */
 .pill-brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  line-height: 1.05;
+  gap: 2px;
 }
 
+/* "Finova" — user-specified exact style */
 .pill-brand-name {
-  font-size: 19px;
-  font-weight: 800;
-  font-family: "Georgia", "Palatino Linotype", serif;
-  font-style: normal;
-  letter-spacing: 0.01em;
-  color: #1C2B1A;
+  font-family: "Playfair Display", serif;
+  font-size: 35px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  color: #003431;
+  -webkit-text-fill-color: #014236;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
   white-space: nowrap;
-  line-height: 1;
   display: block;
+  font-weight: bold;
 }
 
+/* "Academy" — same style as Finova, stacked evenly */
 .pill-brand-academy {
-  font-size: 19px;
-  font-weight: 800;
-  font-family: "Georgia", "Palatino Linotype", serif;
-  font-style: normal;
-  letter-spacing: 0.01em;
-  color: #1C2B1A;
+  font-family: "Playfair Display", serif;
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  color: #00211e;
   white-space: nowrap;
-  line-height: 1;
   display: block;
+  margin-top: 0;
+  font-weight: bold;
 }
 
 .pill-brand-sub {
@@ -98,6 +133,7 @@
   height: var(--nav-h);
   background: var(--base, #060010);
   border-radius: 9999px;
+  box-shadow: 0 4px 20px rgba(59, 91, 219, 0.18);
 }
 
 /* hide old logo (still rendered for GSAP refs but invisible) */
@@ -111,7 +147,7 @@
   align-items: stretch;
   gap: var(--pill-gap);
   margin: 0;
-  padding: 3px;
+  padding: 4px;
   height: 100%;
 }
 
@@ -135,11 +171,12 @@
   font-size: 13px;
   line-height: 0;
   text-transform: uppercase;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  transition: letter-spacing 0.2s;
 }
 
 .pill .hover-circle {
@@ -229,17 +266,18 @@
 /* ─── Mobile menu popover ────────────────────────────────────────────────────── */
 .mobile-menu-popover {
   position: absolute;
-  top: 64px;
+  top: 72px;
   left: 12px;
   right: 12px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+  box-shadow: 0 8px 32px rgba(59, 91, 219, 0.14);
   z-index: 998;
   opacity: 0;
   transform-origin: top center;
   visibility: hidden;
-  border: 1px solid #eee;
+  border: 1px solid rgba(59, 91, 219, 0.1);
 }
 
 .mobile-menu-list {
@@ -272,11 +310,22 @@
 @media (max-width: 768px) {
   .pill-nav {
     padding: 8px 16px;
-    --nav-h: 38px;
+    --nav-h: 42px;
+  }
+
+  .pill-logo-video-wrap {
+    width: 60px;
+    height: 60px;
   }
 
   .pill-brand-name {
-    font-size: 14px;
+    font-size: 24px;
+    /* Reduced slightly for mobile so it fits with hamburger menu */
+  }
+
+  .pill-brand-academy {
+    font-size: 22px;
+    /* Scale secondary text proportionally */
   }
 
   .pill-brand-sub {

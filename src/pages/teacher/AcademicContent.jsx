@@ -788,6 +788,7 @@ export default function AcademicContent() {
                         </div>
                     )))}
                 </div>
+            </div>
         </DashboardLayout>
     );
 }

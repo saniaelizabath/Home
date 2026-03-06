@@ -31,6 +31,25 @@ const PillNav = ({
   const mobileMenuRef = useRef(null);
   const navItemsRef = useRef(null);
   const logoRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // ── Scroll-based transparency: transparent on hero, glass after ──
+  useEffect(() => {
+    const onScroll = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      // threshold = 80% of viewport height (past hero)
+      const threshold = window.innerHeight * 0.8;
+      if (window.scrollY > threshold) {
+        el.classList.add("scrolled");
+      } else {
+        el.classList.remove("scrolled");
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll(); // run once on mount
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const layout = () => {
@@ -246,7 +265,7 @@ const PillNav = ({
   };
 
   return (
-    <div className="pill-nav-container">
+    <div className="pill-nav-container" ref={containerRef}>
       <nav
         className={`pill-nav theme-${theme} ${className}`}
         aria-label="Primary"

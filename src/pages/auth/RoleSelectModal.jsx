@@ -37,30 +37,31 @@ export default function RoleSelectModal({ onClose }) {
     return (
         /* Full-screen dimmed backdrop */
         <div
+            className="role-modal-overlay"
             onClick={onClose}
             style={{
                 position: "fixed",
                 inset: 0,
                 zIndex: 9999,
                 /* semi-transparent so the page shows behind */
-            
+
                 display: "flex",
                 alignItems: "flex-start",
-                justifyContent: "center",
-                /* pushes the card below the sticky PillNav (~60-70 px tall) */
-                paddingTop: "72px",
+                /* pushes the card below the sticky PillNav (~60-70 px tall) + extra half cm down */
+                paddingTop: "92px",
                 animation: "fadeIn 0.2s ease",
             }}
         >
             {/* Dropdown card */}
             <div
+                className="role-modal-box"
                 onClick={e => e.stopPropagation()}
                 style={{
                     /* blue-glass look that mirrors the dark header */
                     background: "linear-gradient(145deg, rgba(13,17,55,0.97) 0%, rgba(26,26,80,0.97) 100%)",
                     border: "1px solid rgba(255,255,255,0.1)",
                     borderRadius: 20,
-                    padding: "24px 20px 20px",
+                    padding: "30px 20px 20px",
                     width: 320,
                     boxShadow: "0 20px 60px rgba(0,0,30,0.55), 0 0 0 1px rgba(80,100,255,0.15)",
                     backdropFilter: "blur(20px)",
@@ -195,6 +196,17 @@ export default function RoleSelectModal({ onClose }) {
             <style>{`
                 @keyframes fadeIn  { from { opacity:0 } to { opacity:1 } }
                 @keyframes dropDown { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:none } }
+                
+                .role-modal-overlay {
+                    justify-content: center;
+                }
+                
+                @media (min-width: 1024px) {
+                    .role-modal-overlay {
+                        justify-content: flex-end !important;
+                        padding-right: calc(max(0px, 50vw - 720px) + 32px) !important;
+                    }
+                }
             `}</style>
         </div>
     );
