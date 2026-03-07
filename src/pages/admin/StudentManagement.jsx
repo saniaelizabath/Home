@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../components/shared/DashboardLayout";
 import { db } from "../../firebase";
-import { collection, onSnapshot, updateDoc, deleteDoc, doc, arrayRemove } from "firebase/firestore";
+import { collection, onSnapshot, updateDoc, deleteDoc, doc, arrayRemove, getDocs, query, where } from "firebase/firestore";
 import useIsMobile from "../../hooks/useIsMobile";
 
 /* ─── Slide Toggle ─────────────────────────────────────────── */
@@ -34,6 +34,8 @@ export default function StudentManagement() {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [selectedClass, setSelectedClass] = useState("all");
+    const [selectedCourse, setSelectedCourse] = useState("all");
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
@@ -72,6 +74,93 @@ export default function StudentManagement() {
         finally { setSaving(false); }
     };
 
+    /* ── Send Report Email ── */
+    const [sendingId, setSendingId] = useState(null);
+    const sendReport = async (student) => {
+        if (!confirm(`Send progress report to ${student.email}?`)) return;
+        setSendingId(student.id);
+        try {
+            // Fetch records
+            const [tsSnap, attSnap] = await Promise.all([
+                getDocs(query(collection(db, "testScores"), where("studentId", "==", student.id))),
+                getDocs(query(collection(db, "attendance"), where("studentId", "==", student.id)))
+            ]);
+
+            const tsData = tsSnap.docs.map(d => d.data());
+            const attData = attSnap.docs.map(d => d.data());
+
+            // Process Tests
+            const tests = tsData.filter(s => !s.type || s.type === "test");
+            const testsEarned = tests.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
+            const testsMax = tests.reduce((acc, curr) => acc + (Number(curr.max) || 100), 0);
+            const testsPct = testsMax > 0 ? Math.round((testsEarned / testsMax) * 100) : 0;
+
+            // Process Assignments
+            const assignments = tsData.filter(s => s.type === "assignment");
+            const assignEarned = assignments.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
+            const assignMax = assignments.reduce((acc, curr) => acc + (Number(curr.max) || 100), 0);
+            const assignPct = assignMax > 0 ? Math.round((assignEarned / assignMax) * 100) : 0;
+
+            // Process Attendance
+            const attPresent = attData.filter(a => a.status === "present").length;
+            const attTotal = attData.length;
+            const attPct = attTotal > 0 ? Math.round((attPresent / attTotal) * 100) : 0;
+
+            const htmlContent = `
+                <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #1a1a2e; text-align: center;">Finova Academy Progress Report</h2>
+                    <p><strong>Student:</strong> ${student.name}</p>
+                    <p><strong>Course:</strong> ${student.course}</p>
+                    <p><strong>Class:</strong> ${student.class}</p>
+                    
+                    <h3 style="border-bottom: 2px solid #eee; padding-bottom: 5px;">Overall Performance</h3>
+                    <table style="width: 100%; text-align: left; margin-bottom: 20px;">
+                        <tr>
+                            <td style="padding: 8px 0;"><strong>Tests Aggregate:</strong></td>
+                            <td style="color: ${testsPct >= 50 ? '#20C997' : '#FF6B6B'}; font-weight: bold;">${testsPct}% (${testsEarned}/${testsMax})</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0;"><strong>Assignments Aggregate:</strong></td>
+                            <td style="color: ${assignPct >= 50 ? '#20C997' : '#FF6B6B'}; font-weight: bold;">${assignPct}% (${assignEarned}/${assignMax})</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0;"><strong>Attendance Punctuality:</strong></td>
+                            <td style="color: ${attPct >= 75 ? '#20C997' : '#e67700'}; font-weight: bold;">${attPct}% (${attPresent}/${attTotal} Days)</td>
+                        </tr>
+                    </table>
+                    <p style="font-size: 12px; color: #888; text-align: center;">This is an automatically generated report requested by the administration.</p>
+                </div>
+            `;
+
+            const res = await fetch("/api/send-report", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: student.email,
+                    subject: "Student Progress Report - Finova Academy",
+                    htmlContent
+                })
+            });
+
+            // If running local Vite without Vercel CLI, /api returns index.html or 404
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await res.text();
+                throw new Error("API Route did not return JSON. Are you running 'npm run dev' instead of 'vercel dev'? Expected a Vercel Serverless Function response.");
+            }
+
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || "Failed to send");
+            alert("Report sent successfully!");
+
+        } catch (e) {
+            console.error(e);
+            alert("Error sending report: " + e.message);
+        } finally {
+            setSendingId(null);
+        }
+    };
+
     /* ── Delete ── */
     const remove = async (s) => {
         if (!confirm(`Delete student ${s.name}? This cannot be undone.`)) return;
@@ -83,11 +172,16 @@ export default function StudentManagement() {
         } catch (e) { alert("Error: " + e.message); }
     };
 
-    const filtered = students.filter(s =>
-        s.name?.toLowerCase().includes(search.toLowerCase()) ||
-        s.email?.toLowerCase().includes(search.toLowerCase()) ||
-        s.course?.toLowerCase().includes(search.toLowerCase())
-    );
+    const uniqueCourses = [...new Set(students.map(s => s.course).filter(Boolean))];
+
+    const filtered = students.filter(s => {
+        const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) ||
+            s.email?.toLowerCase().includes(search.toLowerCase()) ||
+            s.course?.toLowerCase().includes(search.toLowerCase());
+        const matchClass = selectedClass === "all" || s.class === selectedClass;
+        const matchCourse = selectedCourse === "all" || s.course === selectedCourse;
+        return matchSearch && matchClass && matchCourse;
+    });
 
     const approved = filtered.filter(s => s.status === "active").length;
     const pending = filtered.filter(s => s.status !== "active").length;
@@ -95,7 +189,7 @@ export default function StudentManagement() {
     return (
         <DashboardLayout>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
                 <div>
                     <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 900, color: "#1a1a2e", marginBottom: 4 }}>Student Management</h1>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -104,9 +198,31 @@ export default function StudentManagement() {
                         {pending > 0 && <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, background: "#FFF9DB", color: "#e67700" }}>⏳ {pending} pending</span>}
                     </div>
                 </div>
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="🔍 Search by name, email, course…"
-                    style={{ padding: "12px 18px", borderRadius: 30, border: "2px solid #eee", fontSize: 14, outline: "none", width: isMobile ? "100%" : 280 }} />
+            </div>
+
+            {/* Filters */}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 14, marginBottom: 28 }}>
+                <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}>SEARCH</label>
+                    <input value={search} onChange={e => setSearch(e.target.value)}
+                        placeholder="Name, email, course…"
+                        style={{ width: "100%", padding: "11px", borderRadius: 10, border: "2px solid #eee", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}>CLASS</label>
+                    <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} style={{ width: "100%", padding: "11px", borderRadius: 10, border: "2px solid #eee", fontSize: 14, outline: "none" }}>
+                        <option value="all">All Classes</option>
+                        <option value="Class 11">Class 11</option>
+                        <option value="Class 12">Class 12</option>
+                    </select>
+                </div>
+                <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 6 }}>COURSE/SUBJECT</label>
+                    <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} style={{ width: "100%", padding: "11px", borderRadius: 10, border: "2px solid #eee", fontSize: 14, outline: "none" }}>
+                        <option value="all">All Courses</option>
+                        {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
             </div>
 
             <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.07)", overflow: "hidden" }}>
@@ -162,6 +278,9 @@ export default function StudentManagement() {
 
                                 {/* Actions */}
                                 <div style={{ display: "flex", gap: 8 }}>
+                                    <button onClick={() => sendReport(s)} disabled={sendingId === s.id} style={{ padding: "7px 14px", borderRadius: 20, background: "#E6FCF5", color: "#20C997", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>
+                                        {sendingId === s.id ? "Sending…" : "✉️ Send Report"}
+                                    </button>
                                     <button onClick={() => { setEditingId(s.id); setEditForm(s); }} style={{ padding: "7px 14px", borderRadius: 20, background: "#E8EEFF", color: "#3B5BDB", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>Edit</button>
                                     <button onClick={() => remove(s)} style={{ padding: "7px 14px", borderRadius: 20, background: "#FFF0F0", color: "#FF6B6B", fontWeight: 700, border: "none", cursor: "pointer", fontSize: 12 }}>Delete</button>
                                 </div>

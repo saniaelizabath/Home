@@ -285,6 +285,34 @@ export default function ClassDashboard() {
     }
   };
 
+  /* ── Mark online test as Attempted ── */
+  const handleMarkAttempted = async (itemId) => {
+    if (!user?.uid) return;
+    if (!window.confirm("Did you complete the Google Form test? Mark it as attempted?")) return;
+
+    setSubmitting(p => ({ ...p, [itemId]: true }));
+    try {
+      const payload = {
+        itemId,
+        studentId: user.uid,
+        studentName: studentName || user?.email || "Student",
+        classType: studentClassType,
+        type: "test",
+        driveLink: "Online Test Attempted", // placeholder so we know it's not a link
+        submittedAt: serverTimestamp(),
+        status: "Attempted",
+        marks: null, feedback: null,
+        testId: itemId,
+      };
+      await addDoc(collection(db, "submissions"), payload);
+      setSubmitted(p => ({ ...p, [itemId]: payload }));
+    } catch (e) {
+      alert("Failed to mark as attempted: " + e.message);
+    } finally {
+      setSubmitting(p => ({ ...p, [itemId]: false }));
+    }
+  };
+
   /* ── Calendar helpers ── */
   const startOffset = (new Date(year, month, 1).getDay() + 6) % 7; // Mon-first
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -730,7 +758,7 @@ export default function ClassDashboard() {
                   )}
                 </div>
                 {/* ── Written test submission area ── */}
-                {isWritten && (
+                {isWritten ? (
                   <div style={{ marginTop: 10, padding: "10px 12px", background: sub ? "#F0FDF4" : "#F8F9FF", borderRadius: 12, border: `1.5px solid ${sub ? "#86EFAC" : "#E8EEFF"}` }}>
                     {sub ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -762,6 +790,31 @@ export default function ClassDashboard() {
                       </div>
                     )}
                   </div>
+                ) : (
+                  /* ── Online test submission area ── */
+                  (sub || (!isFuture && !isPast)) && (
+                    <div style={{ marginTop: 10, padding: "10px 12px", background: sub ? "#F0FDF4" : "#FFF8F0", borderRadius: 12, border: `1.5px solid ${sub ? "#86EFAC" : "#FFE4C4"}` }}>
+                      {sub ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#16A34A" }}>
+                            ✅ Marked as Attempted
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#E8590C", textTransform: "uppercase", letterSpacing: "0.05em", flex: 1 }}>
+                            ✓ Did you complete the Google Form?
+                          </div>
+                          <button
+                            onClick={() => handleMarkAttempted(t.id)}
+                            disabled={submitting[t.id]}
+                            style={{ padding: "6px 14px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer", background: "#E8590C", color: "#fff", whiteSpace: "nowrap", opacity: submitting[t.id] ? 0.7 : 1 }}>
+                            {submitting[t.id] ? "Marking…" : "Mark Attempted"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
                 )}
               </div>
             )

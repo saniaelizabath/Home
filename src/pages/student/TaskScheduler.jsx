@@ -378,8 +378,10 @@ export default function TaskScheduler() {
                 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
                 .responsive-grid-tasks { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; }
                 .responsive-grid-mood { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+                .task-queue-container { flex: 1; overflow-y: auto; max-height: 600px; padding-right: 8px; }
                 @media (max-width: 1024px) {
-                    .responsive-grid-tasks, .responsive-grid-mood { grid-template-columns: 1fr; }
+                    .responsive-grid-tasks, .responsive-grid-mood { display: flex; flex-direction: column; }
+                    .task-queue-container { overflow-y: visible; max-height: none; padding-right: 0; }
                 }
             `}</style>
 
@@ -490,7 +492,7 @@ export default function TaskScheduler() {
                                     <div style={{ fontSize: 13 }}>Add your study tasks on the left to get started</div>
                                 </div>
                             ) : (
-                                <div style={{ flex: 1, overflowY: "auto" }}>
+                                <div className="task-queue-container">
                                     {tasks.map((t) => {
                                         const done = completedIds.has(t.id);
                                         return (

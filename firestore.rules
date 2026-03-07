@@ -60,6 +60,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /attendance/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /testScores/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Chat conversations
     match /chats/{chatId} {
       allow read: if true;
