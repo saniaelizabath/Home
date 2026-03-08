@@ -5,7 +5,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { email, subject, htmlContent } = req.body;
+    const { email, subject, htmlContent, pdfAttachment } = req.body;
 
     if (!email || !htmlContent) {
         return res.status(400).json({ message: 'Missing recipient email or HTML content' });
@@ -24,7 +24,14 @@ export default async function handler(req, res) {
             from: `"Finova Academy" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: subject || 'Student Progress Report',
-            html: htmlContent
+            html: htmlContent,
+            attachments: pdfAttachment ? [
+                {
+                    filename: 'Progress_Report.pdf',
+                    content: pdfAttachment.split("base64,")[1] || pdfAttachment,
+                    encoding: 'base64'
+                }
+            ] : []
         };
 
         const info = await transporter.sendMail(mailOptions);

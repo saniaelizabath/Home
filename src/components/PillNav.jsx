@@ -285,8 +285,7 @@ const PillNav = ({
             </video>
           </div>
           <div className="pill-brand-text">
-            <span className="pill-brand-name">Finova</span>
-            <span className="pill-brand-academy">Academy</span>
+            <span className="pill-brand-name">Finova Academy</span>
           </div>
         </a>
 

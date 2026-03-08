@@ -89,7 +89,7 @@
 /* "Finova" — user-specified exact style */
 .pill-brand-name {
   font-family: "Playfair Display", serif;
-  font-size: 35px;
+  font-size: 50px;
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -0.5px;
@@ -104,7 +104,7 @@
 }
 
 /* "Academy" — same style as Finova, stacked evenly */
-.pill-brand-academy {
+/* .pill-brand-academy {
   font-family: "Playfair Display", serif;
   font-size: 34px;
   font-weight: 500;
@@ -115,7 +115,7 @@
   display: block;
   margin-top: 0;
   font-weight: bold;
-}
+} */
 
 .pill-brand-sub {
   font-size: 10px;

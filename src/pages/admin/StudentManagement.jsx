@@ -3,6 +3,8 @@ import DashboardLayout from "../../components/shared/DashboardLayout";
 import { db } from "../../firebase";
 import { collection, onSnapshot, updateDoc, deleteDoc, doc, arrayRemove, getDocs, query, where } from "firebase/firestore";
 import useIsMobile from "../../hooks/useIsMobile";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 /* ─── Slide Toggle ─────────────────────────────────────────── */
 function SlideToggle({ enabled, onToggle }) {
@@ -89,20 +91,28 @@ export default function StudentManagement() {
             const tsData = tsSnap.docs.map(d => d.data());
             const attData = attSnap.docs.map(d => d.data());
 
+            // Date formatter utility
+            const formatDate = (ts) => {
+                if (!ts) return "—";
+                const d = ts.toDate ? ts.toDate() : new Date(ts);
+                return d.toLocaleDateString("en-IN", { day: 'numeric', month: 'short', year: 'numeric' });
+            };
+
             // Process Tests
-            const tests = tsData.filter(s => !s.type || s.type === "test");
+            const tests = tsData.filter(s => !s.type || s.type === "test").sort((a, b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0));
             const testsEarned = tests.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
             const testsMax = tests.reduce((acc, curr) => acc + (Number(curr.max) || 100), 0);
             const testsPct = testsMax > 0 ? Math.round((testsEarned / testsMax) * 100) : 0;
 
             // Process Assignments
-            const assignments = tsData.filter(s => s.type === "assignment");
+            const assignments = tsData.filter(s => s.type === "assignment").sort((a, b) => (b.submittedAt?.toMillis?.() || 0) - (a.submittedAt?.toMillis?.() || 0));
             const assignEarned = assignments.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
             const assignMax = assignments.reduce((acc, curr) => acc + (Number(curr.max) || 100), 0);
             const assignPct = assignMax > 0 ? Math.round((assignEarned / assignMax) * 100) : 0;
 
             // Process Attendance
-            const attPresent = attData.filter(a => a.status === "present").length;
+            const attDataSorted = [...attData].sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
+            const attPresent = attData.filter(a => a.status === "present" || a.status === "Present").length;
             const attTotal = attData.length;
             const attPct = attTotal > 0 ? Math.round((attPresent / attTotal) * 100) : 0;
 
@@ -132,13 +142,94 @@ export default function StudentManagement() {
                 </div>
             `;
 
+            // Generate PDF
+            const doc = new jsPDF();
+            doc.setFontSize(22);
+            doc.setTextColor(26, 26, 46);
+            doc.text("Finova Academy", 14, 22);
+
+            doc.setFontSize(16);
+            doc.text("Student Progress Report", 14, 32);
+
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text(`Student: ${student.name}`, 14, 42);
+            doc.text(`Email: ${student.email}`, 14, 48);
+            doc.text(`Course: ${student.course || "—"}`, 14, 54);
+            doc.text(`Class: ${student.class || "—"}`, 14, 60);
+
+            doc.setTextColor(26, 26, 46);
+            doc.setFontSize(14);
+            doc.text("Performance Summary", 14, 72);
+
+            autoTable(doc, {
+                startY: 76,
+                head: [["Metric", "Score / Total", "Percentage"]],
+                body: [
+                    ["Tests Aggregate", `${testsEarned} / ${testsMax}`, `${testsPct}%`],
+                    ["Assignments Aggregate", `${assignEarned} / ${assignMax}`, `${assignPct}%`],
+                    ["Attendance Punctuality", `${attPresent} / ${attTotal} Days`, `${attPct}%`]
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [59, 91, 219] },
+                styles: { fontSize: 10 }
+            });
+
+            let finalY = doc.lastAutoTable.finalY + 15;
+
+            if (tests.length > 0) {
+                doc.setFontSize(14);
+                doc.text("Tests Detail", 14, finalY);
+                autoTable(doc, {
+                    startY: finalY + 4,
+                    head: [["Date", "Test Name", "Score"]],
+                    body: tests.map(t => [formatDate(t.submittedAt), t.testName || "—", `${t.score} / ${t.max || 100}`]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [32, 201, 151] },
+                    styles: { fontSize: 9 }
+                });
+                finalY = doc.lastAutoTable.finalY + 15;
+            }
+
+            if (assignments.length > 0) {
+                if (finalY > 250) { doc.addPage(); finalY = 20; }
+                doc.setFontSize(14);
+                doc.text("Assignments Detail", 14, finalY);
+                autoTable(doc, {
+                    startY: finalY + 4,
+                    head: [["Date", "Assignment Name", "Score"]],
+                    body: assignments.map(a => [formatDate(a.submittedAt), a.testName || "—", `${a.score} / ${a.max || 100}`]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [81, 207, 102] },
+                    styles: { fontSize: 9 }
+                });
+                finalY = doc.lastAutoTable.finalY + 15;
+            }
+
+            if (attDataSorted.length > 0) {
+                if (finalY > 250) { doc.addPage(); finalY = 20; }
+                doc.setFontSize(14);
+                doc.text("Attendance Detail", 14, finalY);
+                autoTable(doc, {
+                    startY: finalY + 4,
+                    head: [["Date", "Course", "Status"]],
+                    body: attDataSorted.map(a => [formatDate(a.date), a.courseId || "—", a.status]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [255, 146, 43] },
+                    styles: { fontSize: 9 }
+                });
+            }
+
+            const pdfBase64 = doc.output('datauristring');
+
             const res = await fetch("/api/send-report", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email: student.email,
                     subject: "Student Progress Report - Finova Academy",
-                    htmlContent
+                    htmlContent,
+                    pdfAttachment: pdfBase64
                 })
             });
 
