@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { loginAdmin, loginStudent, loginTeacher } from "../../authService";
+import { loginAdmin, loginStudent, loginTeacher, resetStudentPassword, generateTeacherOtp, resetTeacherPassword } from "../../authService";
 
 const ROLE_META = {
     student: { icon: "🎓", accent: "#3B5BDB", label: "Student", light: "#E8EEFF" },
@@ -26,6 +26,12 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [msg, setMsg] = useState("");
+
+    // Reset flow states
+    const [isResetMode, setIsResetMode] = useState(false);
+    const [resetStep, setResetStep] = useState(1); // 1 = Email, 2 = Verify OTP (Teacher) & New Pass
+    const [otp, setOtp] = useState("");
+    const [newPassword, setNewPassword] = useState("");
 
     const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
@@ -59,6 +65,52 @@ export default function LoginPage() {
             // Clean up Firebase Auth error codes for display
             const msg = err.message.replace(/Firebase: |Error \(auth\/.*?\)\./g, "").trim();
             setError(msg || "Login failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReset = async (e) => {
+        e.preventDefault();
+        setError(""); setMsg("");
+        if (!form.email) { setError("Please enter your email."); return; }
+
+        setLoading(true);
+        try {
+            if (role === "teacher") {
+                if (resetStep === 1) {
+                    // Send OTP
+                    const { otp } = await generateTeacherOtp(form.email);
+                    const res = await fetch('/api/send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: form.email, otp })
+                    });
+
+                    if (!res.ok) throw new Error("Failed to send verification email.");
+                    setMsg("A 6-digit verification code has been sent to your email.");
+                    setResetStep(2);
+                } else if (resetStep === 2) {
+                    // Verify OTP and set new password
+                    if (!otp || !newPassword) throw new Error("Please enter OTP and new password.");
+                    await resetTeacherPassword(form.email, otp, newPassword);
+                    setMsg("Password reset successfully! You can now log in.");
+                    setIsResetMode(false);
+                    setResetStep(1);
+                    setOtp("");
+                    setNewPassword("");
+                    setForm(p => ({ ...p, password: "" }));
+                }
+            } else {
+                // Admin & Student
+                await resetStudentPassword(form.email);
+                setMsg("A password reset link has been sent to your email.");
+                setIsResetMode(false);
+            }
+        } catch (err) {
+            console.error(err);
+            const msg = err.message.replace(/Firebase: |Error \(auth\/.*?\)\./g, "").trim();
+            setError(msg || "Failed to reset password.");
         } finally {
             setLoading(false);
         }
@@ -119,13 +171,51 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
-                    {["email", "password"].map(field => (
-                        <div key={field} style={{ marginBottom: 20 }}>
-                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#444", textTransform: "capitalize", marginBottom: 8 }}>{field}</label>
+                {!isResetMode ? (
+                    <form onSubmit={handleSubmit}>
+                        {["email", "password"].map(field => (
+                            <div key={field} style={{ marginBottom: 20 }}>
+                                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#444", textTransform: "capitalize", marginBottom: 8 }}>{field}</label>
+                                <input
+                                    name={field} type={field} value={form[field]} onChange={handleChange}
+                                    placeholder={field === "email" ? "you@example.com" : "••••••••"}
+                                    style={{
+                                        width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15,
+                                        border: "2px solid #eee", outline: "none", transition: "border 0.2s",
+                                        background: "#fafbff", fontFamily: "var(--font-body)", boxSizing: "border-box",
+                                    }}
+                                    onFocus={e => e.target.style.border = `2px solid ${meta.accent}`}
+                                    onBlur={e => e.target.style.border = "2px solid #eee"}
+                                />
+                            </div>
+                        ))}
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+                            <span onClick={() => { setIsResetMode(true); setError(""); setMsg(""); }} style={{ color: meta.accent, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                                Forgot Password?
+                            </span>
+                        </div>
+
+                        <button type="submit" disabled={loading} style={{
+                            width: "100%", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 800,
+                            background: loading ? "#ccc" : meta.accent, color: "#fff", border: "none",
+                            cursor: loading ? "not-allowed" : "pointer", marginTop: 8,
+                            transition: "all 0.2s", boxShadow: `0 8px 28px ${meta.accent}44`,
+                        }}
+                            onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = "translateY(-2px)"; }}
+                            onMouseLeave={e => e.currentTarget.style.transform = "none"}
+                        >
+                            {loading ? "Signing in…" : `Sign in as ${meta.label} →`}
+                        </button>
+                    </form>
+                ) : (
+                    <form onSubmit={handleReset}>
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#444", marginBottom: 8 }}>Email</label>
                             <input
-                                name={field} type={field} value={form[field]} onChange={handleChange}
-                                placeholder={field === "email" ? "you@example.com" : "••••••••"}
+                                name="email" type="email" value={form.email} onChange={handleChange}
+                                placeholder="you@example.com"
+                                disabled={role === "teacher" && resetStep === 2}
                                 style={{
                                     width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15,
                                     border: "2px solid #eee", outline: "none", transition: "border 0.2s",
@@ -135,20 +225,59 @@ export default function LoginPage() {
                                 onBlur={e => e.target.style.border = "2px solid #eee"}
                             />
                         </div>
-                    ))}
 
-                    <button type="submit" disabled={loading} style={{
-                        width: "100%", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 800,
-                        background: loading ? "#ccc" : meta.accent, color: "#fff", border: "none",
-                        cursor: loading ? "not-allowed" : "pointer", marginTop: 8,
-                        transition: "all 0.2s", boxShadow: `0 8px 28px ${meta.accent}44`,
-                    }}
-                        onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = "translateY(-2px)"; }}
-                        onMouseLeave={e => e.currentTarget.style.transform = "none"}
-                    >
-                        {loading ? "Signing in…" : `Sign in as ${meta.label} →`}
-                    </button>
-                </form>
+                        {role === "teacher" && resetStep === 2 && (
+                            <>
+                                <div style={{ marginBottom: 20 }}>
+                                    <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#444", marginBottom: 8 }}>6-Digit OTP</label>
+                                    <input
+                                        type="text" value={otp} onChange={e => setOtp(e.target.value)}
+                                        placeholder="123456" maxLength={6}
+                                        style={{
+                                            width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15, letterSpacing: "4px",
+                                            border: "2px solid #eee", outline: "none", transition: "border 0.2s",
+                                            background: "#fafbff", fontFamily: "var(--font-body)", boxSizing: "border-box",
+                                        }}
+                                        onFocus={e => e.target.style.border = `2px solid ${meta.accent}`}
+                                        onBlur={e => e.target.style.border = "2px solid #eee"}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: 20 }}>
+                                    <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#444", marginBottom: 8 }}>New Password</label>
+                                    <input
+                                        type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        style={{
+                                            width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15,
+                                            border: "2px solid #eee", outline: "none", transition: "border 0.2s",
+                                            background: "#fafbff", fontFamily: "var(--font-body)", boxSizing: "border-box",
+                                        }}
+                                        onFocus={e => e.target.style.border = `2px solid ${meta.accent}`}
+                                        onBlur={e => e.target.style.border = "2px solid #eee"}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <button type="submit" disabled={loading} style={{
+                            width: "100%", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 800,
+                            background: loading ? "#ccc" : meta.accent, color: "#fff", border: "none",
+                            cursor: loading ? "not-allowed" : "pointer", marginTop: 8,
+                            transition: "all 0.2s", boxShadow: `0 8px 28px ${meta.accent}44`,
+                        }}
+                            onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = "translateY(-2px)"; }}
+                            onMouseLeave={e => e.currentTarget.style.transform = "none"}
+                        >
+                            {loading ? "Processing…" : (role === "teacher" && resetStep === 2 ? "Reset Password" : "Send Reset Link")}
+                        </button>
+
+                        <div style={{ textAlign: "center", marginTop: 16 }}>
+                            <span onClick={() => { setIsResetMode(false); setResetStep(1); setError(""); setMsg(""); }} style={{ color: "#888", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                                ← Back to Login
+                            </span>
+                        </div>
+                    </form>
+                )}
 
                 {role === "student" && (
                     <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: "#888" }}>

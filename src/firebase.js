@@ -4,13 +4,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-    projectId: "tuitionapp-b354c",
-    appId: "1:319686109373:web:d1f2ac234c74cfd0dd2fd4",
-    storageBucket: "tuitionapp-b354c.firebasestorage.app",
-    apiKey: "AIzaSyDAf2W4cBJw64x3v5X5skDEOdDF2BIJKIs",
-    authDomain: "tuitionapp-b354c.firebaseapp.com",
-    messagingSenderId: "319686109373",
-    measurementId: "G-RJXBFSN0PS"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);

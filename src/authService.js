@@ -17,7 +17,7 @@ import {
     doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp,
 } from "firebase/firestore";
 import {
-    createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword,
+    createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, sendPasswordResetEmail
 } from "firebase/auth";
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
@@ -119,6 +119,15 @@ export async function loginStudent(email, password) {
     };
 }
 
+/**
+ * Reset student/admin password via Firebase Auth.
+ * Firebase automatically sends an email to reset the password.
+ */
+export async function resetStudentPassword(email) {
+    if (!email) throw new Error("Please provide an email address.");
+    await sendPasswordResetEmail(auth, email);
+}
+
 // ─── TEACHER ─────────────────────────────────────────────────────────────────
 
 /**
@@ -133,4 +142,50 @@ export async function loginTeacher(email, password) {
     const data = teacherDoc.data();
     if (data.password !== password) throw new Error("Incorrect password.");
     return { ...data, id: teacherDoc.id, role: "teacher" };
+}
+
+/**
+ * Handles generating and verifying OTPs for teacher password resets. 
+ * Teachers use Firestore for auth, so they need a custom flow.
+ */
+export async function generateTeacherOtp(email) {
+    const q = query(collection(db, "teachers"), where("email", "==", email));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error("No teacher account found for this email.");
+
+    const teacherRef = snap.docs[0].ref;
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes from now
+
+    await setDoc(teacherRef, {
+        resetOtp: otp,
+        resetExpiry: expiry
+    }, { merge: true });
+
+    return { otp, teacherId: teacherRef.id };
+}
+
+export async function resetTeacherPassword(email, otpStr, newPassword) {
+    const q = query(collection(db, "teachers"), where("email", "==", email));
+    const snap = await getDocs(q);
+    if (snap.empty) throw new Error("No teacher account found.");
+
+    const teacherDoc = snap.docs[0];
+    const data = teacherDoc.data();
+
+    if (!data.resetOtp || data.resetOtp !== otpStr) {
+        throw new Error("Invalid verification code.");
+    }
+    if (!data.resetExpiry || Date.now() > data.resetExpiry) {
+        throw new Error("Verification code has expired. Please request a new one.");
+    }
+
+    // Update password and clear OTP
+    await setDoc(teacherDoc.ref, {
+        password: newPassword,
+        resetOtp: null,
+        resetExpiry: null
+    }, { merge: true });
 }
