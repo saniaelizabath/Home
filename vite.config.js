@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logoimg.jpeg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo192.png', 'logo512.png'],
       devOptions: {
         enabled: true
       },
@@ -21,14 +21,15 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'logoimg.jpeg',
+            src: 'logo192.png',
             sizes: '192x192',
-            type: 'image/jpeg'
+            type: 'image/png'
           },
           {
-            src: 'logoimg.jpeg',
+            src: 'logo512.png',
             sizes: '512x512',
-            type: 'image/jpeg'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
