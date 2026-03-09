@@ -137,7 +137,7 @@ const CHAPTERS = {
 
 const HEADER_ITEMS = [
   { label: "Home", href: "/" },
-  { label: "About Us", href: "#about-us" },
+  // { label: "About Us", href: "#about-us" },
   { label: "Subjects", href: "#subjects" },
   { label: "Free Trial", href: "#cta" },
   { label: "Login/Signup", href: "#cta" },
