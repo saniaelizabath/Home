@@ -54,7 +54,7 @@ export default function SignupPage() {
                     Create {meta.label} Account
                 </div>
                 <h1 style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 900, color: "#1a1a2e", marginBottom: 12 }}>
-                    Join LedgerLearn
+                    Join Finova Academy
                 </h1>
                 <p style={{ color: "#888", fontSize: 14, marginBottom: 36, lineHeight: 1.7 }}>
                     You're registering as a <strong style={{ color: meta.accent }}>{meta.label}</strong>.
